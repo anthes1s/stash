@@ -1,0 +1,26 @@
+{
+  "name": "stash",
+  "version": "1.0.0",
+  "description": "reinventing the wheel (git)",
+  "bin": "dist/main.js",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "npx ts-node src/main.ts",
+    "build": "npx tsc && pkg ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "pkg": {
+    "scripts": "dist/*.js",
+    "targets": [
+      "node20-linux-x64"
+    ],
+    "outputPath": "dist"
+  },
+  "dependencies": {
+    "@types/node": "^20.13.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
