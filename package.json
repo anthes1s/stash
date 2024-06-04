@@ -16,7 +16,7 @@
     "targets": [
       "node20-linux-x64"
     ],
-    "outputPath": "dist"
+    "outputPath": "bin"
   },
   "dependencies": {
     "@types/node": "^20.13.0",
