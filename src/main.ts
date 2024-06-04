@@ -1,10 +1,8 @@
+import { NetConnectOpts, Socket, createConnection } from 'net';
 import { InitHandler } from './init-handler/init-handler';
 import { StashConfig, createDefaultStashConfig } from './stash-config';
 
 async function main() {
-	// TODO: Create handles for args: init, download, upload
-	// TODO: stash init [REPO NAME] -> create a directory and a .json file inside that directory that would define some properties of that stash (author, version, ip, port?, idfk)	
-
 	const commands: Array<string> = ['init', 'download', 'upload'];
 	const args: Array<string> = process.argv;
 
@@ -14,14 +12,16 @@ async function main() {
 				case 'init': {
 					const stashName: string = args[i + 1];
 					if (!stashName) throw new Error('Missing stash name!');
-
 					const defaultConfig: StashConfig = createDefaultStashConfig(stashName);
 					const handler = new InitHandler(defaultConfig);
 					await handler.handle();
 					break;
 				}
 				case 'download': {
-					console.log('download invoked');
+					// NOTE: 'stash download $ip, $stash_name'? 
+					const ip: string = args[i + 1];
+					const skt: Socket = createConnection(9999, ip);
+					console.log(`download invoked\n trying to connect to ${ip}:9999`);
 					break;
 				}
 				case 'upload': {
