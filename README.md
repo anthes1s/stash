@@ -1,5 +1,5 @@
 # stash
-reinventing the wheel (git) 
+reinventing the wheel (version control) 
 
 # build
 `sudo pacman -Sy node-lts-iron`<br><br>
