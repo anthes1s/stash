@@ -1,6 +1,10 @@
-import { NetConnectOpts, Socket, createConnection } from 'net';
+import { Socket, createConnection } from 'net';
 import { InitHandler } from './init-handler/init-handler';
 import { StashConfig, createDefaultStashConfig } from './stash-config';
+import { DownloadDto, RequestDto } from './init-handler/dto';
+import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 async function main() {
 	const commands: Array<string> = ['init', 'download', 'upload'];
@@ -18,10 +22,46 @@ async function main() {
 					break;
 				}
 				case 'download': {
-					// NOTE: 'stash download $ip, $stash_name'? 
 					const ip: string = args[i + 1];
+					const stashName: string = args[i + 2];
+
 					const skt: Socket = createConnection(9999, ip);
-					console.log(`download invoked\n trying to connect to ${ip}:9999`);
+					skt.on('data', async (data: string) => {
+						const response: Array<DownloadDto> = await JSON.parse(data);
+						// Sort the array so that you could make folders first, and only then write files into them
+						response.sort((a: DownloadDto, b: DownloadDto) => {
+							if (a.isDirectory && !b.isDirectory) {
+								return -1;
+							} else if (!a.isDirectory && b.isDirectory) {
+								return 1;
+							} else {
+								return 0;
+							}
+						});
+
+						// Create base directory
+						const baseStashURL = join('./', stashName)
+						if (!existsSync(baseStashURL)) await mkdir(baseStashURL);
+
+						// Start creating directories and files below
+						for (let entry of response) {
+							if (entry.isDirectory) {
+								// Check if the directory exists
+								const directoryPath = entry.path;
+								if (!existsSync(directoryPath)) await mkdir(join('./', entry.path));
+								else continue;
+								// Create a directory
+							} else {
+								// Write to a file
+								await writeFile(join('./', entry.path), entry.data);
+							}
+						}
+					});
+
+					const request: RequestDto = { command: 'download', stash: stashName };
+					skt.write(JSON.stringify(request));
+
+					console.log(`Trying to connect to ${ip}:9999 and download ${stashName}`);
 					break;
 				}
 				case 'upload': {
