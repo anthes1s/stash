@@ -3,6 +3,7 @@ import { Server, Socket, createServer } from 'net';
 import { mkdir, readdir, stat, writeFile, readFile } from 'fs/promises';
 import { RequestDto } from './dto';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 export class InitHandler {
 	private server: Server;
@@ -10,16 +11,28 @@ export class InitHandler {
 
 	constructor(config: StashConfig) {
 		// NOTE: Maybe I should create another object that would run a server? 
+		//		 I also need to run the server in the separate process.
 		this.server = createServer();
+
 		this.server.on('connection', (socket: Socket) => {
-			console.log(`somebody connected`);
+			console.log(`${socket.remoteAddress} connected`);
+			socket.on('end', () => {
+				console.log(`${socket.remoteAddress} disconnected`);
+			});
 
 			socket.on('data', async (data: string) => { // NOTE: .json string received
 				const message: RequestDto = await JSON.parse(data);
 
 				switch (message.command) {
 					case 'download': {
-						// NOTE: Get every url possible in stash mentioned in message.stash
+						// Check if message.stash exists
+						// Instead of throwing an error, send an error and close the connection
+						if (!existsSync(join(`./`, message.stash))) {
+							socket.write(JSON.stringify({ error: `${message.stash} doesn't exist!` }));
+							socket.end();
+							return;
+						}
+
 						const dir = await readdir(`./${message.stash}`, { withFileTypes: true, recursive: true });
 
 						let files: Array<string> = new Array<string>();
@@ -43,13 +56,18 @@ export class InitHandler {
 									isDirectory: false,
 									data: await readFile(path, { encoding: 'utf-8' }),
 								});
-							} // TODO: Send that it's a directory so client can create a directory on his side
+							}
 						}
 						socket.write(JSON.stringify(response));
 						break;
 					}
+					case 'upload': {
+
+						console.log(`Upload invoked`);
+						break;
+					}
 					default: {
-						console.log(`default invoked :/`);
+						console.log(`Unknown error`);
 						break;
 					}
 				}
@@ -57,6 +75,7 @@ export class InitHandler {
 				socket.end();
 			})
 		});
+
 		this.server.listen(config.port, config.ip, () => {
 			console.log(`${config.title} is listening on ${config.ip}:${config.port}`);
 		});
@@ -65,8 +84,23 @@ export class InitHandler {
 
 	async handle() {
 		if (!this.config) throw new Error('StashConfig is undefined');
-		await mkdir(`./${this.config.title}`);
-		await mkdir(`./${this.config.title}/.stash`);
-		await writeFile(`./${this.config.title}/.stash/stash.json`, JSON.stringify(this.config, null, 2));
+		if (existsSync(join('./', this.config.title))) {
+			console.log(`${this.config.title} already exists!`);
+			console.log(`Checking if configuration folder exists...`);
+		} else {
+			await mkdir(`./${this.config.title}`);
+		}
+		if (existsSync(join('./', this.config.title, '/.stash'))) {
+			console.log(`Folder that holds configuration files exists!`);
+			console.log(`Checking if configuration file exists...`);
+		} else {
+			await mkdir(`./${this.config.title}/.stash`);
+		}
+		if (existsSync(join('./', this.config.title, '/.stash', '/stash.json'))) {
+			console.log(`Configuration file exists!`);
+			console.log(`Stash initialization finished.'`);
+		} else {
+			await writeFile(`./${this.config.title}/.stash/stash.json`, JSON.stringify(this.config, null, 2));
+		}
 	}
 }
