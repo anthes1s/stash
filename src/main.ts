@@ -35,10 +35,6 @@ async function main() {
 					break;
 				}
 				case 'upload': {
-					// TODO:	1) Read the files from your local stash 
-					//			2) Connect to the server
-					//			3) Send prepared data to the server
-					//			4) Done? 
 					const stash: string = args[i + 1];
 					let method: string = args[i + 2];
 					if (!stash) throw new Error(`Name of the stash is missing! Example - 'stash upload stash-name'`);

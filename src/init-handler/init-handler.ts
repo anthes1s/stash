@@ -1,22 +1,17 @@
-import { StashConfig } from 'src/stash-config/stash-config';
+import { StashConfig } from '../stash-config/stash-config';
 import { Server, Socket, createServer } from 'net';
-import { mkdir, readdir, stat, writeFile, readFile } from 'fs/promises';
-import { DownloadDto, RequestDto } from './dto';
+import { mkdir, writeFile } from 'fs/promises';
+import { RequestDto } from './dto';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { StashReader } from '../stash-reader';
+import { StashWriter } from '../stash-writer';
 
 export class InitHandler {
 	private server: Server;
 	private config: StashConfig;
 
 	constructor(config: StashConfig) {
-		// NOTE:	Q: Maybe I should create another object that would run a server? 
-		//			A: Yes. 
-		//			Q: I also need to run the server in the separate process?
-		//			A: Yes. 
-		//			Q: So I could spawn multiple servers for multiple stashes? 
-		//			A: No. You just need it to run in the background. A single instance of server can handle downloads/uploads.
-
 		this.server = createServer();
 
 		this.server.on('connection', (socket: Socket) => {
@@ -37,70 +32,13 @@ export class InitHandler {
 							return;
 						}
 
-						const dir = await readdir(`./${message.stash}`, { withFileTypes: true, recursive: true });
-
-						let files: Array<string> = new Array<string>();
-						for (let value of dir) {
-							files.push(join(value.path, value.name));
-						}
-
-						let response: Array<object> = [];
-						for (let path of files) {
-							const info = await stat(path);
-							// Prepare data to be sent, before sending it back to the user
-							if (info.isDirectory()) {
-								response.push({
-									path: path,
-									isDirectory: true,
-									data: '',
-								});
-							} else {
-								response.push({
-									path: path,
-									isDirectory: false,
-									data: await readFile(path, { encoding: 'utf-8' }),
-								});
-							}
-						}
-						socket.write(JSON.stringify(response));
+						const reader = new StashReader(message.stash);
+						socket.write(await reader.read());
 						break;
 					}
 					case 'upload': {
-						const parsed = await JSON.parse(message.data ?? 'undefined');
-						if (parsed.error) throw new Error(parsed.error);
-
-						const response: Array<DownloadDto> = parsed;
-						// Sort the array so that you could make folders first, and only then write files into them
-
-						response.sort((a: DownloadDto, b: DownloadDto) => {
-							if (a.isDirectory && !b.isDirectory) {
-								return -1;
-							} else if (!a.isDirectory && b.isDirectory) {
-								return 1;
-							} else {
-								return 0;
-							}
-						});
-
-						// Create base directory
-						const baseStashURL = join('./', message.stash)
-						if (!existsSync(baseStashURL)) await mkdir(baseStashURL);
-
-						// Start creating directories and files below
-						for (let entry of response) {
-							if (entry.isDirectory) {
-								// Check if the directory exists
-								const directoryPath = entry.path;
-								if (!existsSync(directoryPath)) await mkdir(join('./', entry.path));
-								else continue;
-								// Create a directory
-							} else {
-								// Write to a file
-								await writeFile(join('./', entry.path), entry.data);
-								console.log(`${entry.path} uploaded!`);
-							}
-						}
-
+						const writer = new StashWriter(message.stash, message.data ?? 'undefined');
+						writer.write();
 						console.log(`Finished uploading files from the ${message.stash}!`);
 						break;
 					}

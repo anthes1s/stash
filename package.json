@@ -12,6 +12,8 @@
   "author": "",
   "license": "ISC",
   "pkg": {
+    "base": "dist",
+    "assets": "dist/**/*.js",
     "scripts": "dist/*.js",
     "targets": [
       "node20-linux-x64"

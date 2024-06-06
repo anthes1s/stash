@@ -1,9 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { readFile, readdir, stat } from "fs/promises";
 import { Socket, createConnection } from "net";
-import { join } from "path";
-import { RequestDto } from "src/init-handler/dto";
-import { StashConfig } from "src/stash-config";
+import { RequestDto } from "../init-handler/dto";
+import { StashConfig } from "../stash-config";
+import { StashReader } from "../stash-reader";
 
 export class UploadHandler {
 	private socket: Socket;
@@ -19,6 +18,7 @@ export class UploadHandler {
 		this.config = JSON.parse(readFileSync(path, { encoding: 'utf-8' }));
 		// Change the version of the stash inside .stash
 		this.incrementVersion(this.config, method);
+		// NOTE: I probably should turn StashConfig into a class and add this method to it, instead of using this in a handler
 		writeFileSync(path, JSON.stringify(this.config, null, 2), { encoding: 'utf-8' });
 		this.config = JSON.parse(readFileSync(path, { encoding: 'utf-8' }));
 
@@ -35,38 +35,12 @@ export class UploadHandler {
 	}
 
 	async handle() {
-		// Start reading files from local repo
-		const dir = await readdir(`./${this.stash}`, { withFileTypes: true, recursive: true });
-
-		let files: Array<string> = new Array<string>();
-		for (let value of dir) {
-			files.push(join(value.path, value.name));
-		}
-
-		let data: Array<object> = [];
-		for (let path of files) {
-			const info = await stat(path);
-			// Prepare data to be sent, before sending it back to the user
-			if (info.isDirectory()) {
-				data.push({
-					path: path,
-					isDirectory: true,
-					data: '',
-				});
-			} else {
-				console.log(`Reading ${path}...`);
-				data.push({
-					path: path,
-					isDirectory: false,
-					data: await readFile(path, { encoding: 'utf-8' }),
-				});
-			}
-		}
+		const reader = new StashReader(this.stash);
 
 		const request: RequestDto = {
 			command: 'upload',
 			stash: this.stash,
-			data: JSON.stringify(data),
+			data: await reader.read(),
 		};
 
 		this.socket.write(JSON.stringify(request));
