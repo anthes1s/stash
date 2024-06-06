@@ -12,9 +12,12 @@ export class DownloadHandler {
 	constructor(ip: string, stash: string) {
 		this.ip = ip;
 		this.stash = stash;
-
 		this.socket = createConnection(9999, ip);
 		console.log(`Connecting to ${this.ip}...`);
+
+		this.socket.on('error', (error: any) => {
+			console.error(error?.message);
+		});
 
 		this.socket.on('data', async (data: string) => {
 			const parsed = await JSON.parse(data);
@@ -52,7 +55,6 @@ export class DownloadHandler {
 			}
 			console.log(`Finished downloading files from the stash!`);
 		});
-
 	}
 
 	async handle() {

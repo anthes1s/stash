@@ -1,7 +1,7 @@
 import { StashConfig } from 'src/stash-config/stash-config';
 import { Server, Socket, createServer } from 'net';
 import { mkdir, readdir, stat, writeFile, readFile } from 'fs/promises';
-import { RequestDto } from './dto';
+import { DownloadDto, RequestDto } from './dto';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -10,8 +10,13 @@ export class InitHandler {
 	private config: StashConfig;
 
 	constructor(config: StashConfig) {
-		// NOTE: Maybe I should create another object that would run a server? 
-		//		 I also need to run the server in the separate process.
+		// NOTE:	Q: Maybe I should create another object that would run a server? 
+		//			A: Yes. 
+		//			Q: I also need to run the server in the separate process?
+		//			A: Yes. 
+		//			Q: So I could spawn multiple servers for multiple stashes? 
+		//			A: No. You just need it to run in the background. A single instance of server can handle downloads/uploads.
+
 		this.server = createServer();
 
 		this.server.on('connection', (socket: Socket) => {
@@ -26,7 +31,6 @@ export class InitHandler {
 				switch (message.command) {
 					case 'download': {
 						// Check if message.stash exists
-						// Instead of throwing an error, send an error and close the connection
 						if (!existsSync(join(`./`, message.stash))) {
 							socket.write(JSON.stringify({ error: `${message.stash} doesn't exist!` }));
 							socket.end();
@@ -62,8 +66,42 @@ export class InitHandler {
 						break;
 					}
 					case 'upload': {
+						const parsed = await JSON.parse(message.data ?? 'undefined');
+						if (parsed.error) throw new Error(parsed.error);
 
-						console.log(`Upload invoked`);
+						const response: Array<DownloadDto> = parsed;
+						// Sort the array so that you could make folders first, and only then write files into them
+
+						response.sort((a: DownloadDto, b: DownloadDto) => {
+							if (a.isDirectory && !b.isDirectory) {
+								return -1;
+							} else if (!a.isDirectory && b.isDirectory) {
+								return 1;
+							} else {
+								return 0;
+							}
+						});
+
+						// Create base directory
+						const baseStashURL = join('./', message.stash)
+						if (!existsSync(baseStashURL)) await mkdir(baseStashURL);
+
+						// Start creating directories and files below
+						for (let entry of response) {
+							if (entry.isDirectory) {
+								// Check if the directory exists
+								const directoryPath = entry.path;
+								if (!existsSync(directoryPath)) await mkdir(join('./', entry.path));
+								else continue;
+								// Create a directory
+							} else {
+								// Write to a file
+								await writeFile(join('./', entry.path), entry.data);
+								console.log(`${entry.path} uploaded!`);
+							}
+						}
+
+						console.log(`Finished uploading files from the ${message.stash}!`);
 						break;
 					}
 					default: {
