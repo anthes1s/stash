@@ -18,9 +18,20 @@ export class DownloadHandler {
 		});
 
 		this.socket.on('data', async (data: string) => {
-			const writer = new StashWriter(this.stash, data);
-			writer.write();
-			console.log(`Finished downloading files from the stash!`);
+			const message: RequestDto = await JSON.parse(data);
+
+			switch (message.command) {
+				case 'config': {
+
+					break;
+				}
+				default: {
+					const writer = new StashWriter(this.stash, data);
+					writer.write();
+					console.log(`Finished downloading files from the ${this.stash}!`);
+					break;
+				}
+			}
 		});
 	}
 

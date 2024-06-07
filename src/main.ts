@@ -15,7 +15,7 @@ async function main() {
 					const stashName: string = args[i + 1];
 					if (!stashName) throw new Error('Missing stash name!');
 
-					const defaultConfig: StashConfig = createDefaultStashConfig(stashName);
+					const defaultConfig: StashConfig = await createDefaultStashConfig(stashName);
 
 					const handler = new InitHandler(defaultConfig);
 					await handler.handle();
@@ -45,9 +45,8 @@ async function main() {
 					if (!existsSync(`./${stash}`)) throw new Error(`${stash} doesn't exist!`);
 
 					const handler = new UploadHandler(stash, method);
-					handler.handle();
+					await handler.handle();
 
-					console.log('upload invoked');
 					break;
 				}
 				default: {
@@ -60,9 +59,9 @@ async function main() {
 		return 0;
 	} catch (error: any) {
 		console.error(error?.message);
+		return process.exit(1);
 	}
 }
 
 main();
 
-// NOTE: I think I should implement handlers as EventEmmiter object. So, when I parse arguments I could emit events (e.g. .emit('init', options) .emit('upload', options) etc.) to handle them. 
