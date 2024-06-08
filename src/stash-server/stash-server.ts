@@ -5,8 +5,7 @@ import { DownloadDto, RequestDto } from "../init-handler/dto";
 import { join } from "path";
 import { StashReader } from "../stash-reader";
 import { StashWriter } from "../stash-writer";
-import { rm, rmdir } from "fs/promises";
-import { isUndefined } from "util";
+import { rm } from "fs/promises";
 
 export class StashServer {
 	private server: Server;
@@ -29,10 +28,8 @@ export class StashServer {
 
 			socket.on('data', async (data: string) => { // NOTE: .json string received
 				const message: RequestDto = await JSON.parse(data);
-
 				switch (message.command) {
 					case 'download': {
-						// Check if message.stash exists
 						if (!existsSync(join(`./`, message.stash))) {
 							socket.write(JSON.stringify({ error: `${message.stash} doesn't exist!` }));
 							socket.end();
@@ -43,7 +40,6 @@ export class StashServer {
 						break;
 					}
 					case 'upload': {
-						// Check if some folder from the local repo are missing 
 						const reader = new StashReader(config.title);
 						const remoteStashFiles: Array<DownloadDto> = await JSON.parse(await reader.read());
 						const localStashFiles: Array<DownloadDto> = await JSON.parse(message.data ?? 'undefined');
@@ -55,9 +51,6 @@ export class StashServer {
 							if (!localPaths.includes(path)) await rm(path, { recursive: true });
 						});
 
-						console.log('remotePaths', remotePaths);
-						console.log('localPaths', localPaths);
-
 						const writer = new StashWriter(message.stash, JSON.stringify(localStashFiles));
 						writer.write();
 						console.log(`Finished uploading files from the ${message.stash}!`);
@@ -68,7 +61,6 @@ export class StashServer {
 						break;
 					}
 				}
-
 				socket.end();
 			})
 		});

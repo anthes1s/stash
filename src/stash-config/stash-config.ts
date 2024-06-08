@@ -20,7 +20,6 @@ export async function createDefaultStashConfig(stash: string) {
 	}
 }
 
-// Returns true if remote version is greater than the local one, indicating that you need to download before uploading
 export async function compareStashVersion(remoteStashConfig: StashConfig, localStashConfig: StashConfig) {
 	const remoteVersion = remoteStashConfig.version.split('.');
 	const localVersion = localStashConfig.version.split('.');

@@ -22,12 +22,12 @@ export class DownloadHandler {
 
 			switch (message.command) {
 				case 'config': {
-
+					// NOTE: I thought i was going to put something here, but I didn't, so whatever
 					break;
 				}
 				default: {
 					const writer = new StashWriter(this.stash, data);
-					writer.write();
+					await writer.write();
 					console.log(`Finished downloading files from the ${this.stash}!`);
 					break;
 				}

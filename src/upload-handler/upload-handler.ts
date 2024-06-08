@@ -45,7 +45,6 @@ export class UploadHandler extends EventEmitter {
 
 		});
 
-
 		this.socket.on('error', (error: any) => {
 			throw new Error(error?.message);
 		});
