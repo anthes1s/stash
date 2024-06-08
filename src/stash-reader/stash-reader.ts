@@ -9,8 +9,6 @@ export class StashReader {
 	}
 
 	async read() {
-		// TODO: !!! REFACTOR BELOW !!!
-		// Start reading files from local repo
 		const dir = await readdir(`./${this.stash}`, { withFileTypes: true, recursive: true });
 
 		let files: Array<string> = new Array<string>();
@@ -26,7 +24,6 @@ export class StashReader {
 				data.push({
 					path: path,
 					isDirectory: true,
-					data: '',
 				});
 			} else {
 				console.log(`Reading ${path}...`);
@@ -37,8 +34,6 @@ export class StashReader {
 				});
 			}
 		}
-		// TODO: !!! REFACTOR ABOVE !!!
-		// Finish reading files from local repo 
 
 		return JSON.stringify(data);
 	}

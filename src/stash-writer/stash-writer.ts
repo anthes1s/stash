@@ -42,7 +42,7 @@ export class StashWriter {
 				// Create a directory
 			} else {
 				// Write to a file
-				await writeFile(join('./', entry.path), entry.data);
+				await writeFile(join('./', entry.path), entry.data ?? 'undefined');
 				console.log(`${entry.path} downloaded!`);
 			}
 		}

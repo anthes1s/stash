@@ -1,10 +1,12 @@
 import { Server, Socket, createServer } from "net";
 import { StashConfig, getStashConfig } from "../stash-config";
 import { existsSync } from "fs";
-import { RequestDto } from "../init-handler/dto";
+import { DownloadDto, RequestDto } from "../init-handler/dto";
 import { join } from "path";
 import { StashReader } from "../stash-reader";
 import { StashWriter } from "../stash-writer";
+import { rm, rmdir } from "fs/promises";
+import { isUndefined } from "util";
 
 export class StashServer {
 	private server: Server;
@@ -41,7 +43,22 @@ export class StashServer {
 						break;
 					}
 					case 'upload': {
-						const writer = new StashWriter(message.stash, message.data ?? 'undefined');
+						// Check if some folder from the local repo are missing 
+						const reader = new StashReader(config.title);
+						const remoteStashFiles: Array<DownloadDto> = await JSON.parse(await reader.read());
+						const localStashFiles: Array<DownloadDto> = await JSON.parse(message.data ?? 'undefined');
+
+						let remotePaths: Array<string> = remoteStashFiles.map((obj: DownloadDto) => obj.path);
+						let localPaths: Array<string> = localStashFiles.map((obj: DownloadDto) => obj.path);
+
+						remotePaths.forEach(async (path: string) => {
+							if (!localPaths.includes(path)) await rm(path, { recursive: true });
+						});
+
+						console.log('remotePaths', remotePaths);
+						console.log('localPaths', localPaths);
+
+						const writer = new StashWriter(message.stash, JSON.stringify(localStashFiles));
 						writer.write();
 						console.log(`Finished uploading files from the ${message.stash}!`);
 						break;
