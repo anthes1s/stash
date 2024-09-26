@@ -1,7 +1,7 @@
 # stash
-reinventing the wheel (version control) 
+small version control tool that you can use in an intranet environment
 
 # build
-`sudo pacman -Sy node-lts-iron npm`<br><br>
+`sudo pacman -Sy nodejs npm --needed --noconfirm`<br><br>
 `sudo npm install -g @yao-pkg/pkg`<br><br>
 `npm run build`<br><br>
